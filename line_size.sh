@@ -5,6 +5,6 @@
 # 
 # grep -rn '^' file ... | line_size.sh
 
-while read line; do
-	echo $(echo "$line" | cut -d ":" -f 3 | wc -c) "$line"
+while read -r line; do
+	printf "%s %s\n" "$(printf "%s\n" "$line" | cut -d ":" -f 3 | wc -c)" "$line"
 done

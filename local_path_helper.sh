@@ -25,7 +25,7 @@ read_paths() {
 	if [ -f "$path_file" ]; then
 		debug "Reading path file: $path_file"
 
-		while read path_element; do
+		while read -r path_element; do
 			case "$path_element" in
 				\#*|"") continue ;;
 				--) append_after="yes"; debug "Got -- now appending"; continue ;;
@@ -48,11 +48,11 @@ read_paths() {
 	fi
 }
 
-: ${BASEDIR:="$HOME"}
+: "${BASEDIR:="$HOME"}"
 
 read_paths "$BASEDIR/.paths"
 
-for path_file in $BASEDIR/.paths.d/*; do
+for path_file in "$BASEDIR"/.paths.d/*; do
 	read_paths "$path_file"
 done
 

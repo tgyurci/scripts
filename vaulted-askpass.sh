@@ -16,7 +16,7 @@ err() {
 
 [ -n "$VAULTED_ENV" ] || err "\$VAULTED_ENV is empty"
 
-: ${VAULTED_PASS_PATH:="vaulted"}
+: "${VAULTED_PASS_PATH:="vaulted"}"
 
 case "$VAULTED_PASSWORD_TYPE" in
 	*password*)
