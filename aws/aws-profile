@@ -30,7 +30,8 @@ def get_unset_command(shell_type, name):
 
 
 def cmd_list_profiles():
-    print("\n".join(get_profiles()))
+    for profile in get_profiles():
+        print("echo {};".format(shlex.quote(profile)))
 
 
 def cmd_set_profile(shell_type, profile_name):
