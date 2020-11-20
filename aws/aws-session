@@ -6,12 +6,12 @@ set -eu
 
 debug_msg() {
 	if [ "${DEBUG:-}" = true ]; then
-		echo "$@" >&2
+		echo "${0##*/}:" "$@" >&2
 	fi
 }
 
 info_msg() {
-	echo "$@" >&2
+	echo "${0##*/}:" "$@" >&2
 }
 
 get_pass_field() {
@@ -22,6 +22,11 @@ get_pass_field() {
 	printf "%s\n" "$passdata" | awk "/^${field}: / { print \$2 }"
 }
 
+if [ $# != "1" ]; then
+	info_msg "Usage: $0 aws_account"
+	exit 1
+fi
+
 aws_account="$1"
 
 cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/aws-session"
@@ -29,7 +34,7 @@ cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/aws-session"
 cache_filename="$(printf "%s" $aws_account | tr '/' '_')_creds"
 cache_file="${cache_dir}/${cache_filename}"
 
-cache_expiration_filename="${cache_filename}_expiration"
+cache_expiration_filename="${cache_filename}.expiration"
 cache_expiration_file="${cache_dir}/${cache_expiration_filename}"
 
 if [ -f "$cache_file" ]; then
@@ -48,21 +53,21 @@ if [ -f "$cache_file" ]; then
 			aws_creds="$(cat "$cache_file")"
 		else
 			debug_msg "Cache expired at: $cache_expiration (now: $now), refreshing"
-			info_msg "Refreshing cached credentials for: $aws_account"
+			info_msg "Refreshing cached AWS credentials for: $aws_account"
 
 			rm -f "$cache_file" "$cache_expiration_file"
 
 			aws_creds=""
 		fi
 	else
-		debug_msg "Cache expiration file ($cache_expiration_file) does not exist, now expiration checking was performed"
+		debug_msg "Cache expiration file ($cache_expiration_file) does not exist, no expiration checking was performed"
 
 		#aws_creds="$(gpg --quiet --decrypt "$cache_file")"
 		aws_creds="$(cat "$cache_file")"
 	fi
 else
 	debug_msg "Cache file ($cache_file) does not exist"
-	info_msg "Loading credentials for: $aws_account"
+	info_msg "Loading AWS credentials for: $aws_account"
 
 	aws_creds=""
 fi
@@ -108,7 +113,7 @@ EOI
   \"Expiration\": \"$aws_session_expiration\"
 }"
 
-	debug_msg "Caching credentials to: $cache_file"
+	debug_msg "Saving cached credentials to: $cache_file"
 	mkdir -p -m 700 "$cache_dir"
 	#printf "%s" "$aws_creds" | gpg --quiet --encrypt --armor > "$cache_file"
 	printf "%s" "$aws_creds" > "$cache_file"
