@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+
+import getopt
+import shlex
+import sys
+
+shell_formats = {
+    "sh": {
+        "set": "{0}={1}; export {0}",
+        "unset": "unset {0}"
+        },
+    "csh": {
+        "set": "setenv {0} {1}",
+        "unset": "unsetenv {0}"
+        }
+    }
+
+
+def get_profiles():
+    from awscli.clidriver import create_clidriver
+    return create_clidriver().session.available_profiles
+
+
+def get_set_command(shell_type, name, value):
+    return shell_formats[shell_type]["set"].format(name, shlex.quote(value))
+
+
+def get_unset_command(shell_type, name):
+    return shell_formats[shell_type]["unset"].format(name)
+
+
+def cmd_list_profiles():
+    print("\n".join(get_profiles()))
+
+
+def cmd_set_profile(shell_type, profile_name):
+    if profile_name not in get_profiles():
+        print("Unknown profile: {}".format(profile_name), file=sys.stderr)
+        sys.exit(1)
+        return
+
+    print(get_set_command(shell_type, "AWS_PROFILE", profile_name))
+    print(get_set_command(shell_type, "AWS_SDK_LOAD_CONFIG", "1"))
+
+
+def cmd_unset_profile(shell_type):
+    print(get_unset_command(shell_type, "AWS_PROFILE"))
+    print(get_unset_command(shell_type, "AWS_SDK_LOAD_CONFIG"))
+
+
+def print_usage(argv0, message):
+    if message:
+        print("{}: {}".format(argv0, message), file=sys.stderr)
+    print("Usage: {} [-s | -c] -l | -u | [--] profile_name".format(argv0), file=sys.stderr)
+
+
+def main(name, args):
+    opts, args = getopt.getopt(args, "lusc")
+
+    list_opt = False
+    unset_opt = False
+    sh_opt = False
+    csh_opt = False
+
+    for opt, _ in opts:
+        if opt == "-l": list_opt = True
+        elif opt == "-u": unset_opt = True
+        elif opt == "-s": sh_opt = True
+        elif opt == "-c": csh_opt = True
+
+    if list_opt and unset_opt:
+        print_usage(name, "-l and -u can't be set simultenaously")
+        return 1
+
+    if list_opt:
+        if sh_opt or csh_opt or len(args) > 0:
+            print_usage(name, "-l can's be used with other options")
+            return 1
+
+        cmd_list_profiles()
+        return 0
+
+    if sh_opt and csh_opt:
+        print_usage(name, "-s and -c can't be set simultenaously")
+        return 1
+
+    if sh_opt: shell_type = "sh"
+    elif csh_opt: shell_type = "csh"
+    else: shell_type = "sh"
+
+    if unset_opt:
+        if sh_opt or csh_opt or len(args) > 0:
+            print_usage(name, "-u can's be used with other options")
+            return 1
+
+        cmd_unset_profile(shell_type)
+        return 0
+
+    if len(args) == 0:
+        print_usage(name, "a profile name is required")
+        return 1
+
+    if len(args) > 1:
+        print_usage(name, "only one profile can be specified")
+        return 1
+
+    cmd_set_profile(shell_type, args[0])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[0], sys.argv[1:]))
