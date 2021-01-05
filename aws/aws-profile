@@ -56,7 +56,11 @@ def print_usage(argv0, message):
 
 
 def main(name, args):
-    opts, args = getopt.getopt(args, "lusc")
+    try:
+        opts, args = getopt.getopt(args, "lusc")
+    except getopt.GetoptError as err:
+        print_usage(name, "{}".format(err))
+        return 1
 
     list_opt = False
     unset_opt = False
