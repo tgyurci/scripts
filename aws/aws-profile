@@ -4,12 +4,18 @@ import getopt
 import shlex
 import sys
 
+SH_SHELL = "sh"
+CSH_SHELL = "csh"
+
+AWS_PROFILE = "AWS_PROFILE"
+AWS_SDK_LOAD_CONFIG = "AWS_SDK_LOAD_CONFIG"
+
 shell_formats = {
-    "sh": {
+    SH_SHELL: {
         "set": "{0}={1}; export {0}",
         "unset": "unset {0}"
         },
-    "csh": {
+    CSH_SHELL: {
         "set": "setenv {0} {1}",
         "unset": "unsetenv {0}"
         }
@@ -40,13 +46,13 @@ def cmd_set_profile(shell_type, profile_name):
         sys.exit(1)
         return
 
-    print(get_set_command(shell_type, "AWS_PROFILE", profile_name))
-    print(get_set_command(shell_type, "AWS_SDK_LOAD_CONFIG", "1"))
+    print(get_set_command(shell_type, AWS_PROFILE, profile_name))
+    print(get_set_command(shell_type, AWS_SDK_LOAD_CONFIG, "1"))
 
 
 def cmd_unset_profile(shell_type):
-    print(get_unset_command(shell_type, "AWS_PROFILE"))
-    print(get_unset_command(shell_type, "AWS_SDK_LOAD_CONFIG"))
+    print(get_unset_command(shell_type, AWS_PROFILE))
+    print(get_unset_command(shell_type, AWS_SDK_LOAD_CONFIG))
 
 
 def print_usage(argv0, message):
@@ -89,9 +95,9 @@ def main(name, args):
         print_usage(name, "-s and -c can't be set simultenaously")
         return 1
 
-    if sh_opt: shell_type = "sh"
-    elif csh_opt: shell_type = "csh"
-    else: shell_type = "sh"
+    if sh_opt: shell_type = SH_SHELL
+    elif csh_opt: shell_type = CSH_SHELL
+    else: shell_type = SH_SHELL
 
     if unset_opt:
         if sh_opt or csh_opt or len(args) > 0:
