@@ -78,10 +78,11 @@ if [ -z "$eks_token" ]; then
 	eks_token="$(aws ${region:+--region $region} eks get-token --cluster-name "$cluster_name" ${role:+--role $role})"
 
 	debug_msg "Caching EKS credentials to: $cache_file"
+	# shellcheck disable=SC2174
 	mkdir -p -m 700 "$cache_dir"
 	printf "%s" "$eks_token" > "$cache_file"
 
-	eks_token_expiration="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" $(echo "$eks_token" | jq -r '.status.expirationTimestamp') +%s)"
+	eks_token_expiration="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "$(echo "$eks_token" | jq -r '.status.expirationTimestamp')" +%s)"
 	debug_msg "Credentials will expire at: $eks_token_expiration"
 	printf "%s" "$eks_token_expiration" > "$cache_expiration_file"
 fi

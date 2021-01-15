@@ -15,6 +15,7 @@ info_msg() {
 }
 
 get_pass_field() {
+	# shellcheck disable=SC2039
 	local field passdata
 	field="$1"
 	passdata="$2"
@@ -31,7 +32,7 @@ aws_account="$1"
 
 cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/aws-session"
 
-cache_filename="$(printf "%s" $aws_account | tr '/' '_')_creds"
+cache_filename="$(printf "%s" "$aws_account" | tr '/' '_')_creds"
 cache_file="${cache_dir}/${cache_filename}"
 
 cache_expiration_filename="${cache_filename}.expiration"
@@ -84,6 +85,7 @@ if [ -z "$aws_creds" ]; then
 	pass_mfa_serial="$(get_pass_field "AWS-MFA-Serial" "$passdata")"
 	pass_mfa_token="$(PASSWORD_STORE_ENABLE_EXTENSIONS=true pass otp "$pass_entry")"
 
+	# shellcheck disable=SC2140
 	read -r aws_session_access_key_id aws_session_secret_access_key aws_session_token aws_session_expiration <<EOI
 $(
 	AWS_ACCESS_KEY_ID="$pass_aws_access_key_id" \
@@ -114,6 +116,7 @@ EOI
 }"
 
 	debug_msg "Saving cached credentials to: $cache_file"
+	# shellcheck disable=SC2174
 	mkdir -p -m 700 "$cache_dir"
 	#printf "%s" "$aws_creds" | gpg --quiet --encrypt --armor > "$cache_file"
 	printf "%s" "$aws_creds" > "$cache_file"
