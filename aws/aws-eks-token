@@ -28,9 +28,7 @@ if [ -z "$region" ] || [ -z "$cluster_name" ]; then
 	usage
 fi
 
-if [ "$#" -gt 1 ]; then 
-	role="$2"
-fi
+role="${2:-""}"
 
 cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/aws-eks-token"
 
