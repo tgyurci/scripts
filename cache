@@ -1,0 +1,139 @@
+#!/bin/sh
+
+set -eu
+
+debug_msg() {
+	if [ "${DEBUG:-}" = true ]; then
+		echo "${0##*/}:" "$@" >&2
+	fi
+}
+
+info_msg() {
+	echo "${0##*/}:" "$@" >&2
+}
+
+err_msg() {
+	echo "${0##*/}:" "$@" >&2
+}
+
+usage() {
+	if [ $# -gt 0 ]; then
+		info_msg "$@"
+	fi
+
+	info_msg "Usage: ${0##*/} -gsd -t type -n name [-e expiration]"
+	exit 1
+}
+
+safe_path() {
+	printf "%s" "$1" | tr '/\0' '_'
+}
+
+set_cache_filenames() {
+	cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/$(safe_path "$cache_type")"
+
+	cache_filename="$(safe_path "$cache_name")_cache"
+	cache_file="${cache_dir}/${cache_filename}"
+
+	cache_expiration_filename="${cache_filename}.expiration"
+	cache_expiration_file="${cache_dir}/${cache_expiration_filename}"
+
+	debug_msg "Cache entry file: $cache_file"
+	debug_msg "Cache entry expiration file: $cache_expiration_file"
+}
+
+cmd_get() {
+	set_cache_filenames
+
+	if [ -f "$cache_file" ]; then
+		debug_msg "Cache file ($cache_file) exists, trying to load"
+
+		if [ -f "$cache_expiration_file" ]; then
+			debug_msg "Cache expiration file ($cache_expiration_file) exists, checking expiration"
+
+			cache_expiration="$(tr -c -d '[:digit:]' < "$cache_expiration_file")"
+			cache_expiration="${cache_expiration:-0}"
+			now="$(date +%s)"
+
+			if [ "$now" -lt "$cache_expiration" ]; then
+				debug_msg "Cache will expire at: $cache_expiration now: $now"
+
+				cat "$cache_file"
+			else
+				debug_msg "Cache expired at: $cache_expiration (now: $now), deleting stale data"
+
+				rm -f -- "$cache_file" "$cache_expiration_file"
+
+				return 2
+			fi
+		else
+			debug_msg "Cache expiration file ($cache_expiration_file) does not exist, no expiration checking was performed"
+
+			cat "$cache_file"
+		fi
+	else
+		debug_msg "Cache file ($cache_file) does not exist"
+
+		return 1
+	fi
+}
+
+cmd_set() {
+	set_cache_filenames
+
+	debug_msg "Storing cache ${cache_type}/${cache_name}"
+
+	# shellcheck disable=SC2174
+	mkdir -p -m 700 "$cache_dir"
+	cat > "$cache_file"
+
+	if [ -n "$cache_expiration" ]; then
+		debug_msg "Setting cache ${cache_type}/${cache_name} expiration to $cache_expiration"
+		printf "%s" "$cache_expiration" > "$cache_expiration_file"
+	fi
+}
+
+cmd_delete() {
+	set_cache_filenames
+
+	debug_msg "Deleting cache entry: ${cache_type}/${cache_name}"
+
+	rm -f -- "$cache_file" "$cache_expiration_file"
+}
+
+opt_cmd_get=""
+opt_cmd_set=""
+opt_cmd_delete=""
+
+cache_type=""
+cache_name=""
+cache_expiration=""
+
+while getopts :gsdt:n:e: opt; do
+	case "$opt" in
+		g) opt_cmd_get="1" ;;
+		s) opt_cmd_set="1" ;;
+		d) opt_cmd_delete="1" ;;
+		t) cache_type="$OPTARG" ;;
+		n) cache_name="$OPTARG" ;;
+		e) cache_expiration="$OPTARG" ;;
+		\?) usage ;; 
+	esac
+done
+
+[ -n "$cache_type" ] || usage "Type (-t) must be specified"
+[ -n "$cache_name" ] || usage "Name (-n) must be specified"
+
+case "${opt_cmd_get}${opt_cmd_set}${opt_cmd_delete}" in
+	"1") ;;
+	"") usage "One of -g, -s or -d must be specified" ;;
+	*) usage "Only one of -g, -s or -d may be specified" ;;
+esac
+
+if [ -n "$opt_cmd_get" ]; then
+	cmd_get
+elif [ -n "$opt_cmd_set" ]; then
+	cmd_set
+elif [ -n "$opt_cmd_delete" ]; then
+	cmd_delete
+fi
