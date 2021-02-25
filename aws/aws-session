@@ -30,48 +30,7 @@ fi
 
 aws_account="$1"
 
-cache_dir="${XDG_CACHE_DIR:-"$HOME/.cache"}/aws-session"
-
-cache_filename="$(printf "%s" "$aws_account" | tr '/' '_')_creds"
-cache_file="${cache_dir}/${cache_filename}"
-
-cache_expiration_filename="${cache_filename}.expiration"
-cache_expiration_file="${cache_dir}/${cache_expiration_filename}"
-
-if [ -f "$cache_file" ]; then
-	debug_msg "Cache file ($cache_file) exists, trying to load"
-
-	if [ -f "$cache_expiration_file" ]; then
-		debug_msg "Cache expiration file ($cache_expiration_file) exists, checking expiration"
-
-		cache_expiration="$(cat "$cache_expiration_file")"
-		now="$(date +%s)"
-
-		if [ "$now" -lt "$cache_expiration" ]; then
-			debug_msg "Cache will expire at: $cache_expiration now: $now"
-
-			#aws_creds="$(gpg --quiet --decrypt "$cache_file")"
-			aws_creds="$(cat "$cache_file")"
-		else
-			debug_msg "Cache expired at: $cache_expiration (now: $now), refreshing"
-			info_msg "Refreshing cached AWS credentials for: $aws_account"
-
-			rm -f "$cache_file" "$cache_expiration_file"
-
-			aws_creds=""
-		fi
-	else
-		debug_msg "Cache expiration file ($cache_expiration_file) does not exist, no expiration checking was performed"
-
-		#aws_creds="$(gpg --quiet --decrypt "$cache_file")"
-		aws_creds="$(cat "$cache_file")"
-	fi
-else
-	debug_msg "Cache file ($cache_file) does not exist"
-	info_msg "Loading AWS credentials for: $aws_account"
-
-	aws_creds=""
-fi
+aws_creds="$(cache -g -t aws-session -n "$aws_account" || true)"
 
 if [ -z "$aws_creds" ]; then
 	debug_msg "Getting new AWS credentials for account: $aws_account"
@@ -115,15 +74,9 @@ EOI
   \"Expiration\": \"$aws_session_expiration\"
 }"
 
-	debug_msg "Saving cached credentials to: $cache_file"
-	# shellcheck disable=SC2174
-	mkdir -p -m 700 "$cache_dir"
-	#printf "%s" "$aws_creds" | gpg --quiet --encrypt --armor > "$cache_file"
-	printf "%s" "$aws_creds" > "$cache_file"
-
 	aws_creds_expiration="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "$aws_session_expiration" +%s)"
-	debug_msg "Credentials will expire at: $aws_creds_expiration"
-	printf "%s" "$aws_creds_expiration" > "$cache_expiration_file"
+
+	printf "%s" "$aws_creds" | cache -s -t aws-session -n "$aws_account" -e "$aws_creds_expiration"
 fi
 
 echo "$aws_creds"
