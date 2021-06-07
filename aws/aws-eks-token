@@ -2,8 +2,10 @@
 
 set -eu
 
-info_msg() {
-	echo "${0##*/}:" "$@" >&2
+debug() {
+	if [ -n "${DEBUG:-}" ]; then
+		echo "${0##*/}:" "$@" >&2
+	fi
 }
 
 usage() {
@@ -27,7 +29,7 @@ role="${2:-""}"
 eks_token="$(cache -g -t "aws-eks-token" -n "${region}_${cluster_name}" || true)"
 
 if [ -z "$eks_token" ]; then
-	info_msg "Loading EKS credentials for: ${region}/${cluster_name}"
+	debug "Loading EKS credentials for: ${region}/${cluster_name}"
 
 	eks_token="$(aws ${region:+--region $region} eks get-token --cluster-name "$cluster_name" ${role:+--role $role})"
 	eks_token_expiration="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "$(echo "$eks_token" | jq -r '.status.expirationTimestamp')" +%s)"

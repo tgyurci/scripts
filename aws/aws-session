@@ -4,14 +4,10 @@
 
 set -eu
 
-debug_msg() {
-	if [ "${DEBUG:-}" = true ]; then
+debug() {
+	if [ -n "${DEBUG:-}" ]; then
 		echo "${0##*/}:" "$@" >&2
 	fi
-}
-
-info_msg() {
-	echo "${0##*/}:" "$@" >&2
 }
 
 get_pass_field() {
@@ -24,7 +20,7 @@ get_pass_field() {
 }
 
 if [ $# != "1" ]; then
-	info_msg "Usage: $0 aws_account"
+	echo "${0##*/}:" "Usage: $0 aws_account" >&2
 	exit 1
 fi
 
@@ -33,7 +29,7 @@ aws_account="$1"
 aws_creds="$(cache -g -t aws-session -n "$aws_account" || true)"
 
 if [ -z "$aws_creds" ]; then
-	debug_msg "Getting new AWS credentials for account: $aws_account"
+	debug "Getting new AWS credentials for account: $aws_account"
 
 	pass_entry="$aws_account"
 
