@@ -1,0 +1,95 @@
+#!/bin/sh
+
+# gpg-edit: Decrypts a GnuPG-encrypted file, executes $EDITOR with the
+# decrypted file and re-encrypts the edited data.
+
+set -eu
+
+err() {
+	echo "gpg-edit:" "error": "$@" >&2
+	exit 1
+}
+
+debug() {
+	if [ -n "${DEBUG:-}" ]; then
+		echo "gpg-edit:" "$@" >&2
+	fi
+}
+
+matches() {
+	# shellcheck disable=SC2254
+	case "$1" in
+		($2) return 0 ;;
+	esac
+
+	return 1
+}
+
+gpg_cmd() {
+	gpg --quiet --no-verbose --batch --lock-once "$@"
+}
+
+file_sha256() {
+	gpg_cmd --print-md SHA256 < "$1" | tr -d ' '
+}
+
+tmpdir=""
+
+cleanup() {
+	if [ -n "$tmpdir" ]; then
+		debug "Cleaning up: $tmpdir"
+		rm -rf -- "$tmpdir"
+	fi
+}
+
+trap "cleanup; trap - EXIT" HUP INT TERM EXIT
+
+[ "$#" = 1 ] || err "Usage: $0 file.gpg|file.asc"
+
+encfile="$1"
+basefile=""
+
+if matches "$encfile" "*.gpg"; then
+	basefile="$(basename "${encfile%%.gpg}")"
+elif matches "$encfile" "*.asc"; then
+	basefile="$(basename "${encfile%%.asc}")"
+else
+	err "$encfile must end with .gpg or .asc"
+fi
+
+debug "Encrypted file:" "$encfile"
+debug "Base filename:" "$basefile"
+
+tmpdir="$(mktemp -d -t gpg-edit)"
+tmpfile="${tmpdir}/${basefile}"
+
+if [ -f "$encfile" ]; then
+	debug "Decrypting $encfile to $tmpfile"
+	gpg_cmd --decrypt --output "$tmpfile" "$encfile"
+	original_hash="$(file_sha256 "$tmpfile")"
+	debug "Hash for original file: $original_hash"
+else
+	original_hash=""
+fi
+
+debug "Waiting for editor: $tmpfile"
+if $EDITOR "$tmpfile"; then
+	:
+else
+	res="$?"
+	debug "Editor exited with code $res, exiting"
+	exit "$res"
+fi
+
+if [ -f "$tmpfile" ]; then
+	new_hash="$(file_sha256 "$tmpfile")"
+	debug "Hash for edited file: $new_hash"
+else
+	err "Tempfile does not exist, exiting: $tmpfile"
+fi
+
+if [ "$original_hash" !=  "$new_hash" ]; then
+	debug "Original and new file differ, re-encrypting"
+
+	gpg_cmd --yes --encrypt --armor --output "$encfile" "$tmpfile"
+fi
