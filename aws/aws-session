@@ -35,7 +35,7 @@ aws_creds="$(cache -g -t aws-session -n "$aws_account" || true)"
 if [ -z "$aws_creds" ]; then
 	debug_msg "Getting new AWS credentials for account: $aws_account"
 
-	pass_entry="AWS/$aws_account"
+	pass_entry="$aws_account"
 
 	passdata="$(pass show "$pass_entry")"
 
