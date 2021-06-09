@@ -91,7 +91,7 @@ else
 fi
 
 debug "Waiting for editor: $tmpfile"
-if $EDITOR "$tmpfile"; then
+if ${EDITOR:-"vi"} "$tmpfile"; then
 	:
 else
 	res="$?"
