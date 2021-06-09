@@ -33,8 +33,6 @@ file_sha256() {
 	gpg_cmd --print-md SHA256 < "$1" | tr -d ' '
 }
 
-tmpdir=""
-
 cleanup() {
 	if [ -n "$tmpdir" ]; then
 		debug "Cleaning up: $tmpdir"
@@ -42,9 +40,27 @@ cleanup() {
 	fi
 }
 
-trap "cleanup; trap - EXIT" HUP INT TERM EXIT
+usage() {
+	err "Usage: $0 [-s] [-u local_user ...] [-r recipient ...] file.gpg|file.asc"
+}
 
-[ "$#" = 1 ] || err "Usage: $0 file.gpg|file.asc"
+force=""
+sign=""
+recipients=""
+local_users=""
+while getopts :fsr:u: opt; do
+	case "$opt" in
+		f) force="yes" ;;
+		s) sign="yes" ;;
+		r) recipients="$recipients --recipient $OPTARG" ;;
+		r) local_users="$local_users --local-user $OPTARG" ;;
+		\?) usage ;;
+	esac
+done
+
+shift $(($OPTIND - 1))
+
+[ "$#" = 1 ] || usage
 
 encfile="$1"
 basefile=""
@@ -60,6 +76,8 @@ fi
 debug "Encrypted file:" "$encfile"
 debug "Base filename:" "$basefile"
 
+tmpdir=""
+trap "cleanup; trap - EXIT" HUP INT TERM EXIT
 tmpdir="$(mktemp -d -t gpg-edit)"
 tmpfile="${tmpdir}/${basefile}"
 
@@ -88,8 +106,8 @@ else
 	err "Tempfile does not exist, exiting: $tmpfile"
 fi
 
-if [ "$original_hash" !=  "$new_hash" ]; then
-	debug "Original and new file differ, re-encrypting"
+if [ "$original_hash" !=  "$new_hash" ] || [ -n "$force" ]; then
+	debug "Original and new file differ or force is set, re-encrypting"
 
-	gpg_cmd --yes --encrypt --armor --output "$encfile" "$tmpfile"
+	gpg_cmd --yes --encrypt --armor ${sign:+"--sign"} ${local_users} ${recipients} --output "$encfile" "$tmpfile"
 fi
