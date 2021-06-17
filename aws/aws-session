@@ -1,6 +1,9 @@
 #!/bin/sh
 
 # Loads AWS credentials and caches them locally until it's expiration
+#
+# This script is intended to be used as a `credential_process` for AWS SDKs:
+# https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
 
 set -eu
 
