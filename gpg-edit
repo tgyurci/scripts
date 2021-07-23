@@ -82,6 +82,19 @@ tmpdir="$(mktemp -d -t gpg-edit)"
 tmpfile="${tmpdir}/${basefile}"
 
 if [ -f "$encfile" ]; then
+	if [ -z "$recipients" ]; then
+		debug "Getting recipients from $encfile"
+		enc_recipients="$(gpg_cmd --decrypt --list-only --status-fd 1 "$encfile" |
+			grep '^\[GNUPG:\] ENC_TO ' | cut -d " " -f 3)"
+
+		for enc_recipient in $enc_recipients; do
+			recipient="$(gpg_cmd --list-keys --with-colons "$enc_recipient" |
+				grep '^pub:' | cut -d ":" -f 5)"
+			debug "Adding existing recipient: $recipient"
+			recipients="$recipients --recipient $recipient"
+		done
+	fi
+
 	debug "Decrypting $encfile to $tmpfile"
 	gpg_cmd --decrypt --output "$tmpfile" "$encfile"
 	original_hash="$(file_sha256 "$tmpfile")"
