@@ -108,7 +108,7 @@ if ${EDITOR:-"vi"} "$tmpfile"; then
 	:
 else
 	res="$?"
-	debug "Editor exited with code $res, exiting"
+	debug "Editor exited with code $res, aborting"
 	exit "$res"
 fi
 
@@ -116,7 +116,7 @@ if [ -f "$tmpfile" ]; then
 	new_hash="$(file_sha256 "$tmpfile")"
 	debug "Hash for edited file: $new_hash"
 else
-	err "Tempfile does not exist, exiting: $tmpfile"
+	err "Tempfile does not exist, aborting: $tmpfile"
 fi
 
 if [ "$original_hash" !=  "$new_hash" ] || [ -n "$force" ]; then
