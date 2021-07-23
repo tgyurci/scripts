@@ -3,7 +3,7 @@
 # gpg-edit: Decrypts a GnuPG-encrypted file, executes $EDITOR with the
 # decrypted file and re-encrypts the edited data.
 
-set -eu
+set -euf
 
 err() {
 	echo "gpg-edit:" "error": "$@" >&2
@@ -53,12 +53,12 @@ while getopts :fsr:u: opt; do
 		f) force="yes" ;;
 		s) sign="yes" ;;
 		r) recipients="$recipients --recipient $OPTARG" ;;
-		r) local_users="$local_users --local-user $OPTARG" ;;
+		u) local_users="$local_users --local-user $OPTARG" ;;
 		\?) usage ;;
 	esac
 done
 
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 [ "$#" = 1 ] || usage
 
@@ -122,5 +122,6 @@ fi
 if [ "$original_hash" !=  "$new_hash" ] || [ -n "$force" ]; then
 	debug "Original and new file differ or force is set, re-encrypting"
 
+	# shellcheck disable=SC2086
 	gpg_cmd --yes --encrypt --armor ${sign:+"--sign"} ${local_users} ${recipients} --output "$encfile" "$tmpfile"
 fi
