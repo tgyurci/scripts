@@ -29,7 +29,7 @@ fi
 
 aws_account="$1"
 
-aws_creds="$(cache -g -t aws-session -n "$aws_account" || true)"
+aws_creds="$(cache -g -t aws-creds -n "$aws_account" || true)"
 
 if [ -z "$aws_creds" ]; then
 	debug "Getting new AWS credentials for account: $aws_account"
