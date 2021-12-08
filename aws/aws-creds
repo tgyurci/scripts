@@ -75,7 +75,7 @@ EOI
 
 	aws_creds_expiration="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "$aws_session_expiration" +%s)"
 
-	printf "%s" "$aws_creds" | cache -s -t aws-session -n "$aws_account" -e "$aws_creds_expiration"
+	printf "%s" "$aws_creds" | cache -s -t aws-creds -n "$aws_account" -e "$aws_creds_expiration"
 fi
 
 echo "$aws_creds"
