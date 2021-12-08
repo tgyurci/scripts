@@ -41,7 +41,11 @@ if [ -z "$aws_creds" ]; then
 	pass_aws_access_key_id="$(get_pass_field "AWS-Access-Key-Id" "$passdata")"
 	pass_aws_secret_access_key="$(get_pass_field "AWS-Secret-Access-Key" "$passdata")"
 	pass_mfa_serial="$(get_pass_field "AWS-MFA-Serial" "$passdata")"
-	pass_mfa_token="$(PASSWORD_STORE_ENABLE_EXTENSIONS=true pass otp "$pass_entry")"
+	if [ -n "$pass_mfa_serial" ]; then
+		pass_mfa_token="$(PASSWORD_STORE_ENABLE_EXTENSIONS=true pass otp "$pass_entry" || true)"
+	else
+		pass_mfa_token=""
+	fi
 
 	# shellcheck disable=SC2140
 	read -r aws_session_access_key_id aws_session_secret_access_key aws_session_token aws_session_expiration <<EOI
