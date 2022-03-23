@@ -1,0 +1,96 @@
+#!/bin/sh
+
+set -eu
+
+err() {
+	echo "kubeseal-set:" "error:" "$@" >&2
+	exit 1
+}
+
+debug() {
+	if [ -n "${DEBUG:-}" ]; then
+		echo "kubeseal-set:" "$@" >&2
+	fi
+}
+
+usage() {
+	err "Usage: $0 [-c context] [-n namespace] [-N name] [-s scope] -f sealed-secret.yaml SECRET_KEY SECRET_VALUE"
+}
+
+cleanup() {
+	if [ -n "$tmpdir" ]; then
+		debug "Cleaning up: $tmpdir"
+		rm -rf -- "$tmpdir"
+	fi
+}
+
+get_field_value() {
+	local file field
+	file="$1"
+	field="$2"
+
+	yq -M -r "$field // \"\"" "$file"
+}
+
+file=""
+context=""
+name=""
+namespace=""
+scope=""
+
+while getopts :f:c:N:n:s: opt; do
+	case "$opt" in
+		f) file="$OPTARG" ;;
+		c) context="$OPTARG" ;;
+		N) name="$OPTARG" ;;
+		n) namespace="$OPTARG" ;;
+		s) scope="$OPTARG" ;;
+		\?) usage ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+[ "$#" -ge 2 ] || usage
+
+key="$1"
+value="$2"
+
+[ -n "$file" ] || usage
+[ -f "$file" ] || err "Sealed secret file (-f) does not exists: $file"
+
+if [ -z "$name" ]; then
+	name="$(get_field_value "$file" ".metadata.name")"
+
+	[ -n "$name" ] || err "Name (-N) is not specified and $file does not have .metadata.name either"
+fi
+
+if [ -z "$namespace" ]; then
+	namespace="$(get_field_value "$file" ".metadata.namespace")"
+
+	[ -n "$namespace" ] || err "Namespace (-n) is not specified and $file does not have .metadata.namespace either"
+fi
+
+if [ -z "$scope" ]; then
+	scope="$(get_field_value "$file" '.metadata.annotations."sealedsecrets.bitnami.com/scope"')"
+
+	if [ -z "$scope" ]; then
+		scope="strict"
+	fi
+fi
+
+debug "Sealed secret parameters: name=$name namespace=$namespace scope=$scope"
+
+encrypted_value="$(printf "%s" "$value" | kubeseal --raw --from-file /dev/stdin \
+	${context:+--context "$context"} \
+	${name:+--name "$name"} \
+	${namespace:+--namespace "$namespace"} \
+	--scope "$scope")"
+
+tmpdir=""
+trap "cleanup; trap - EXIT" HUP INT TERM EXIT
+tmpdir="$(mktemp -d -t kubeseal-set)"
+tmpfile="${tmpdir}/$(basename "$file")"
+
+yq -y -r -M --arg encrypted_value "$encrypted_value" ".spec.encryptedData.$key = \$encrypted_value" "$file" > "$tmpfile"
+
+mv -- "$tmpfile" "$file"
