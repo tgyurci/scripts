@@ -95,6 +95,10 @@ if [ -z "$scope" ]; then
 	fi
 fi
 
+kind="$(get_field_value "$file" '.kind')"
+
+[ "$kind" = "SealedSecret" ] || err "File does not look like a SealedSecret: $file"
+
 debug "Sealed secret parameters: name=$name namespace=$namespace scope=$scope"
 
 encrypted_value="$(printf "%s" "$value" | kubeseal --raw --from-file /dev/stdin \
