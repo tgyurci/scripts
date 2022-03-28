@@ -1,5 +1,22 @@
 #!/bin/sh
 
+#
+# kubeseal-set: Sets a secret in a SealedSecret Kubernetes resource.
+#
+# Usage:
+#
+# kubeseal-set [-c context] [-n namespace] [-N name] [-s scope] -f sealed-secret.yaml SECRET_KEY SECRET_VALUE
+#
+# -f: File containing `SealedSecret` resource to modify.
+# -c: Kubeconfig context.  Passed to `kubeseal` as the value for `--context`.
+# -n: Namespace for the sealed secret.  If omitted, then namespace will be extracted from sealed secret file (`.metadata.namespace`).
+# -N: Name for the sealed secret.  If omitted, then name will be extracted from sealed secret file (`.metadata.name`).
+# -s: Scope for the sealed secret.  Passed to `kubeseal` as the value for `--scope`.  Defaults to `strict`.
+#
+# Dependencies: kubeseal (https://github.com/bitnami-labs/sealed-secrets),
+# yq (https://kislyuk.github.io/yq/) and thus jq (https://stedolan.github.io/jq/).
+#
+
 set -eu
 
 err() {
@@ -50,7 +67,7 @@ while getopts :f:c:N:n:s: opt; do
 done
 shift $((OPTIND - 1))
 
-[ "$#" -ge 2 ] || usage
+[ "$#" -eq 2 ] || usage
 
 key="$1"
 value="$2"
