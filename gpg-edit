@@ -73,8 +73,7 @@ else
 	err "$encfile must end with .gpg or .asc"
 fi
 
-debug "Encrypted file:" "$encfile"
-debug "Base filename:" "$basefile"
+debug "Encrypted file: $encfile, base filename: $basefile"
 
 tmpdir=""
 trap "cleanup; trap - EXIT" HUP INT TERM EXIT
@@ -104,7 +103,7 @@ else
 fi
 
 debug "Waiting for editor: $tmpfile"
-if ${EDITOR:-"vi"} "$tmpfile"; then
+if "${EDITOR:-"vi"}" "$tmpfile"; then
 	:
 else
 	res="$?"
@@ -119,7 +118,7 @@ else
 	err "Tempfile does not exist, aborting: $tmpfile"
 fi
 
-if [ "$original_hash" !=  "$new_hash" ] || [ -n "$force" ]; then
+if [ "$original_hash" != "$new_hash" ] || [ -n "$force" ]; then
 	debug "Original and new file differ or force is set, re-encrypting"
 
 	# shellcheck disable=SC2086
