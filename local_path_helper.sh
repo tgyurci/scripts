@@ -30,7 +30,7 @@ read_paths() {
 				\#*|"") continue ;;
 				--) append_after="yes"; debug "Got -- now appending"; continue ;;
 				/*) ;;
-				*) path_element="$HOME/$path_element"
+				*) path_element="$HOME/$path_element" ;;
 			esac
 
 			case ":${path_before}${PATH}${path_after}:" in
