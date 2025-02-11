@@ -1,0 +1,10 @@
+#!/bin/sh
+
+base="${0##*/}"
+
+case "$base" in
+	docker-*) plugin="${base##docker-}" ;;
+	*) echo "Must be invoked as docker-CMD" >&2; exit 1 ;;
+esac
+
+docker "$plugin" "$@"
