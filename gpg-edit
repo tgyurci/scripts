@@ -99,6 +99,7 @@ if [ -f "$encfile" ]; then
 	original_hash="$(file_sha256 "$tmpfile")"
 	debug "Hash for original file: $original_hash"
 else
+	debug "File does not exist, let the editor create it: $encfile"
 	original_hash=""
 fi
 
@@ -115,7 +116,12 @@ if [ -f "$tmpfile" ]; then
 	new_hash="$(file_sha256 "$tmpfile")"
 	debug "Hash for edited file: $new_hash"
 else
-	err "Tempfile does not exist, aborting: $tmpfile"
+	if [ -n "$original_hash" ]; then
+		err "Tempfile does not exist, aborting: $tmpfile"
+	else
+		debug "Editor exited without creating temp file: $tmpfile"
+		exit 0
+	fi
 fi
 
 if [ "$original_hash" != "$new_hash" ] || [ -n "$force" ]; then
