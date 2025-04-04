@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ "$#" = 0 ]; then
+	echo "Interactive login is not allowed" >&2
+	exit 1
+fi
+
+if [ "$#" -ne 2 ] || [ "$1" != "-c" ] || [ "$2" != "docker system dial-stdio" ]; then
+	echo "Usage: docker-shell -c \"docker system dial-stdio\"" >&2
+	exit 1
+fi
+
+exec docker system dial-stdio
